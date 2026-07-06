@@ -3,59 +3,79 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Тело в газе ПВК: импульс, полёт, зона ПНД</title>
+<title>Тело в газе ПВК: толчок, полёт, зона ПНД</title>
 <style>
-  body{margin:0;padding:16px;background:#FAFAF7;color:#1d1d1f;
-       font-family:-apple-system,'Segoe UI',Roboto,sans-serif;max-width:720px;margin:0 auto}
-  h1{font-size:20px;font-weight:600;margin:12px 0 4px}
-  .sub{font-size:14px;color:#5F5E5A;margin-bottom:14px;line-height:1.5}
-  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  button{font-size:15px;padding:10px 18px;border-radius:10px;border:1px solid #C9C7BE;
-         background:#fff;color:#1d1d1f;cursor:pointer}
-  button.primary{background:#EAF3DE;border-color:#97C459;color:#27500A;font-weight:600}
-  .stat{font-size:14px;color:#5F5E5A}
-  .stat b{color:#1d1d1f}
-  .pnd b{font-size:17px;color:#3B6D11}
-  canvas{width:100%;height:auto;display:block;border:1px solid #C9C7BE;border-radius:10px;background:#FFFFFF}
-  .legend{font-size:13px;color:#6E6D66;margin-top:10px;line-height:1.65}
-  .note{font-size:13px;color:#6E6D66;background:#F1F0EB;border-radius:10px;padding:10px 14px;margin-top:12px;line-height:1.6}
+  body{margin:0;padding:20px 16px 40px;background:#F6F7F4;color:#21221F;
+       font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+       font-size:16px;line-height:1.6}
+  .page{max-width:680px;margin:0 auto}
+  h1{font-size:21px;font-weight:600;line-height:1.3;margin:0 0 6px}
+  .sub{font-size:15px;color:#62655C;margin:0 0 18px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  .mode-label{font-size:14px;color:#62655C}
+  button{font-size:16px;padding:12px 20px;border-radius:10px;border:1px solid #C6C9C0;
+         background:#FFFFFF;color:#21221F;cursor:pointer;min-height:44px}
+  button.primary{background:#3B6D11;border-color:#3B6D11;color:#FFFFFF;font-weight:600}
+  button.mode{font-size:14px;padding:9px 14px;min-height:40px}
+  button.mode.on{background:#ECEFE7;border-color:#3B6D11;color:#27500A;font-weight:600}
+  button:focus-visible{outline:3px solid #97C459;outline-offset:2px}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px;
+         font-variant-numeric:tabular-nums}
+  .stat{font-size:15px;color:#62655C}
+  .stat b{font-weight:600;color:#21221F;font-size:18px}
+  .stat.pnd b{color:#3B6D11}
+  canvas{width:100%;height:auto;display:block;border:1px solid #C6C9C0;
+         border-radius:12px;background:#FFFFFF}
+  .legend{font-size:15px;color:#4A4C45;margin-top:14px;max-width:62ch}
+  .legend b.g{color:#3B6D11}
+  .note{font-size:15px;color:#4A4C45;background:#ECEFE7;border-radius:12px;
+        padding:14px 16px;margin-top:14px;line-height:1.6;max-width:62ch;box-sizing:border-box}
 </style>
 </head>
 <body>
+<div class="page">
 <h1>Тело в газе ПВК: толчок, полёт, зона ПНД</h1>
-<div class="sub">Модель среды: 10&nbsp;000 одинаковых шариков, все летят со скоростью c,
-у каждого — только направление. Удар о тело зеркальный (угол падения = углу отражения
-относительно движущейся поверхности). Тело свободное: после толчка его никто не тянет.</div>
+<p class="sub">10&nbsp;000 одинаковых шариков, все со скоростью c, у каждого — только
+направление. Удар о тело зеркальный: угол падения равен углу отражения относительно
+движущейся поверхности. Тело свободное — после толчка его никто не тянет.</p>
 <div class="bar">
-  <button class="primary" id="kick">&#9658; Дать импульс</button>
+  <button class="primary" id="kick">&#9658;&nbsp;Дать импульс</button>
   <button id="slow">Замедлить</button>
   <button id="reset">Сброс</button>
 </div>
 <div class="bar">
-  <span class="stat">скорость тела: <b id="v">0</b>% от c</span>
-  <span class="stat pnd">позади тела летят вслед: <b id="pnd">50%</b></span>
+  <span class="mode-label">Отклик тела на удар:</span>
+  <button class="mode on" id="mImp">обычный (сила удара)</button>
+  <button class="mode" id="mCnt">только ЧИСЛО ударов</button>
+</div>
+<div class="stats">
+  <span class="stat">скорость тела <b id="v">0</b>&thinsp;% от c</span>
+  <span class="stat">ударов спереди/сзади <b id="hits">0&thinsp;/&thinsp;0</b></span>
+  <span class="stat pnd">позади летят вслед <b id="pnd">50</b>&thinsp;%</span>
 </div>
 <canvas id="cv" width="680" height="380"></canvas>
-<div class="legend">
-  <b style="color:#3B6D11">Зелёная дымка</b> — газ, текущий в сторону хода тела:
-  за сферой это <b>зона ПНД</b> (попутное направленное движение), перед ней — носовая волна.
-  Чем ярче — тем согласованнее поток. В хаосе дымки нет: у стоящего тела
-  показатель «летят вслед» держится около 50% (поровну туда и сюда), после толчка
-  вырастает — газ позади организуется, — и по мере торможения тела возвращается к 50%.
+<p class="legend"><b class="g">Зелёная дымка</b> — газ, текущий в сторону хода тела.
+За сферой это <b>зона ПНД</b> (попутное направленное движение), перед ней — носовая
+волна. Чем ярче свечение, тем согласованнее поток; в хаосе дымки нет. У стоящего тела
+показатель «летят вслед» держится около 50&thinsp;% — поровну туда и сюда. После толчка
+он вырастает: газ позади организуется. По мере торможения тела возвращается к 50&thinsp;%.</p>
+<p class="note"><b>Режим «только число ударов»:</b> сила и жёсткость удара выключены —
+тело получает от каждого касания одинаковый крошечный толчок, учитывается только
+сам факт удара и его сторона. Движение всё равно останавливается: следите за счётчиком —
+ударов спереди набегает больше, чем сзади, пока тело движется, потому что тело само
+наезжает на встречные шарики и уезжает от догоняющих. Останавливает тело именно этот
+перевес числа ударов, а не сила.</p>
 </div>
-<div class="note">Что показывает опыт: зона ПНД позади тела действительно возникает
-(зелёный шлейф). Но тело при этом плавно замедляется — следите за счётчиком скорости:
-встречные удары спереди чуть чаще и чуть жёстче попутных сзади, потому что тело идёт
-навстречу передним шарикам и уезжает от задних.</div>
 <script>
 (function(){
 const W=680,H=380,C=130,N=10000,PR=1.7,BR=30,MASS=1150,SZ=2*PR;
+const CNT_DELTA=0.30; // счётный режим: одинаковый квант скорости за каждый удар
 const GX=34,GY=19,CW=W/GX,CH=H/GY,EMA=0.05;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const off=document.createElement('canvas');off.width=GX;off.height=GY;
 const octx=off.getContext('2d');
 const img=octx.createImageData(GX,GY);
-let X,Y,VX,VY,body,slow=false,FU,pndN=0,pndCo=0;
+let X,Y,VX,VY,body,slow=false,FU,pndN=0,pndCo=0,hf=0,hb=0,mode='imp';
 function reset(){
   X=new Float32Array(N);Y=new Float32Array(N);VX=new Float32Array(N);VY=new Float32Array(N);
   FU=new Float32Array(GX*GY);
@@ -65,12 +85,22 @@ function reset(){
     VX[i]=C*Math.cos(a);VY[i]=C*Math.sin(a);
   }
   body={x:150,y:H/2,vx:0};
+  hf=0;hb=0;
 }
 reset();
 document.getElementById('reset').onclick=reset;
 document.getElementById('kick').onclick=()=>{body.vx=0.6*C;};
 const slowBtn=document.getElementById('slow');
 slowBtn.onclick=()=>{slow=!slow;slowBtn.textContent=slow?'Обычная скорость':'Замедлить';};
+const mImp=document.getElementById('mImp'),mCnt=document.getElementById('mCnt');
+function setMode(m){
+  mode=m;
+  mImp.classList.toggle('on',m==='imp');
+  mCnt.classList.toggle('on',m==='cnt');
+  hf=0;hb=0;
+}
+mImp.onclick=()=>setMode('imp');
+mCnt.onclick=()=>setMode('cnt');
 function step(dt){
   body.x+=body.vx*dt;
   if(body.x>W-BR-4){body.x=W-BR-4;body.vx=0;}
@@ -91,7 +121,12 @@ function step(dt){
         let vx=rvx-2*rn*nx+bvx,vy=VY[i]-2*rn*ny;
         const m=Math.hypot(vx,vy)||1;
         VX[i]=vx*C/m;VY[i]=vy*C/m;
-        body.vx-=(-2*rn*nx)/MASS;
+        if(mode==='imp'){
+          body.vx-=(-2*rn*nx)/MASS;      // обычный отклик: импульс удара
+        }else{
+          body.vx-=CNT_DELTA*nx;          // счётный отклик: одинаковый квант
+        }
+        if(nx>0)hf++;else hb++;
       }
     }
     X[i]=x;Y[i]=y;
@@ -107,7 +142,6 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   const d=img.data;
   for(let gy=0;gy<GY;gy++)for(let gx=0;gx<GX;gx++){
-    // сглаживание 3x3 + шумовой порог: дымка = только согласованный поток
     let s=0,n=0;
     for(let jy=Math.max(0,gy-1);jy<=Math.min(GY-1,gy+1);jy++)
       for(let jx=Math.max(0,gx-1);jx<=Math.min(GX-1,gx+1);jx++){s+=FU[jx+GX*jy];n++;}
@@ -128,10 +162,10 @@ function draw(){
     ctx.fillText('зона ПНД',bx-BR-80,by-BR-40);
     ctx.fillText('носовая волна',bx+BR+70,by-BR-40);
   }
-  ctx.fillStyle='#3A3937';
+  ctx.fillStyle='#34342F';
   ctx.beginPath();ctx.arc(bx,by,BR,0,7);ctx.fill();
   if(moving){
-    ctx.strokeStyle='#3A3937';ctx.lineWidth=2.5;
+    ctx.strokeStyle='#34342F';ctx.lineWidth=2.5;
     ctx.beginPath();ctx.moveTo(bx+BR+6,by);ctx.lineTo(bx+BR+6+body.vx*0.35,by);ctx.stroke();
   }
 }
@@ -142,7 +176,8 @@ function frame(t){
   if(slow)dt*=0.3;
   step(dt);draw();
   document.getElementById('v').textContent=Math.max(0,Math.round(body.vx/C*100));
-  document.getElementById('pnd').textContent=(pndN?Math.round(100*pndCo/pndN):50)+'%';
+  document.getElementById('hits').textContent=hf+' / '+hb;
+  document.getElementById('pnd').textContent=(pndN?Math.round(100*pndCo/pndN):50);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
