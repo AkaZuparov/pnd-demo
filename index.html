@@ -40,6 +40,9 @@
 движущейся поверхности. Тело свободное — после толчка его никто не тянет.</p>
 <div class="bar">
   <button class="primary" id="kick">&#9658;&nbsp;Дать импульс</button>
+  <button class="primary" id="kick2" style="background:#5B8A2E;border-color:#5B8A2E">&#9658;&nbsp;Слабый толчок (тело в 10 раз медленнее шариков)</button>
+</div>
+<div class="bar">
   <button id="slow">Замедлить</button>
   <button id="reset">Сброс</button>
 </div>
@@ -65,6 +68,12 @@
 ударов спереди набегает больше, чем сзади, пока тело движется, потому что тело само
 наезжает на встречные шарики и уезжает от догоняющих. Останавливает тело именно этот
 перевес числа ударов, а не сила.</p>
+<p class="note"><b>«Слабый толчок»</b> — режим, когда тело в 10 и более раз медленнее
+шариков (c/v&nbsp;=&nbsp;10). Тело движется медленно, перевес ударов спереди становится
+меньше — но не исчезает: счётчик по-прежнему набегает быстрее спереди, и тело
+по-прежнему плавно останавливается. Перевес строго пропорционален скорости тела:
+вдвое медленнее — вдвое меньше перевес, но нуля он достигает только вместе с полной
+остановкой.</p>
 </div>
 <script>
 (function(){
@@ -89,7 +98,8 @@ function reset(){
 }
 reset();
 document.getElementById('reset').onclick=reset;
-document.getElementById('kick').onclick=()=>{body.vx=0.6*C;};
+document.getElementById('kick').onclick=()=>{body.vx=0.6*C;hf=0;hb=0;};
+document.getElementById('kick2').onclick=()=>{body.vx=0.1*C;hf=0;hb=0;};
 const slowBtn=document.getElementById('slow');
 slowBtn.onclick=()=>{slow=!slow;slowBtn.textContent=slow?'Обычная скорость':'Замедлить';};
 const mImp=document.getElementById('mImp'),mCnt=document.getElementById('mCnt');
