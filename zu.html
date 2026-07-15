@@ -41,10 +41,12 @@
 <h1>Зона ускорения (ЗУ): рождение, подарок и вечный ветер</h1>
 <p class="sub">Десятки тысяч одинаковых шариков, все со скоростью c, у каждого — только
 направление. Шарики обмениваются направлениями (внешне — пролетают насквозь), о тело
-бьются зеркально. Тело свободное. <b>Зелёная дымка</b> — шарики, летящие попутно телу:
-чем ярче, тем ровнее вслед.</p>
+бьются зеркально. Тело свободное. Сами шарики — серые точки: в покое виден только
+абсолютный хаос, никакого потока. <b>Дымка</b> показывает, куда газ течёт
+<b>в среднем</b>: <b style="color:#0F6E56">зелёная</b> — вправо,
+<b style="color:#993C1D">рыжая</b> — влево. Нет течения — нет дымки.</p>
 <div class="bar">
-  <button class="primary" id="kick">&#9658;&nbsp;Дать импульс</button>
+  <button class="primary" id="kick">&#9658;&nbsp;Толчок телу (мгновенный импульс)</button>
   <button class="gift" id="gift">&#10022;&nbsp;Подарить готовую ЗУ</button>
 </div>
 <div class="bar">
@@ -61,10 +63,11 @@
 <canvas id="cv" class="main" width="680" height="430"></canvas>
 <p class="sparklbl">История скорости тела (вправо — время):</p>
 <canvas id="sp" class="spark" width="680" height="44"></canvas>
-<p class="legend"><b>Что смотреть.</b> Нажмите «Дать импульс» и следите за областью
-сразу позади оранжевого тела: там сгущается <b class="g">зелёный след</b> — зона
-ускорения, рождающаяся сама. Она тем ярче и длиннее, чем быстрее тело, — и живёт,
-только пока живо движение.</p>
+<p class="legend"><b>Что смотреть.</b> До толчка дымки нет — среда в полном хаосе.
+Нажмите «Толчок телу»: тело мгновенно получает скорость, и позади него разгорается
+<b class="g">зелёная дымка</b> — зона ускорения, рождающаяся сама из хаоса. Она тем
+ярче и длиннее, чем быстрее тело, — и гаснет вместе с движением. Рыжая дымка у стенок —
+поток, отражённый навстречу.</p>
 <p class="note"><b>«Подарить готовую ЗУ»</b> — позади тела мгновенно создаётся плотное
 облако шариков, летящих строго в него: зона ускорения в чистом виде, мощнее любой
 естественной. В <b>коробке</b> облако даёт телу один толчок, пролетает мимо и
@@ -82,7 +85,7 @@
 (function(){
 const W=680,H=430,C=150;
 const mobile=(navigator.hardwareConcurrency||4)<6||Math.min(screen.width,screen.height)<500;
-const N=mobile?16000:40000, K=2.4/N, BR=44;
+const N=mobile?20000:40000, K=2.4/N, BR=44;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const sp=document.getElementById('sp'),sx=sp.getContext('2d');
 const img=ctx.createImageData(W,H),buf=new Uint32Array(img.data.buffer);
@@ -90,14 +93,15 @@ const BG=[255,255,255],GRAY=[136,135,128],TEAL=[15,110,86];
 function mix(cA,a){const r=Math.round(BG[0]*(1-a)+cA[0]*a),g=Math.round(BG[1]*(1-a)+cA[1]*a),
   b=Math.round(BG[2]*(1-a)+cA[2]*a);return(255<<24)|(b<<16)|(g<<8)|r;}
 const PGRAY=mix(GRAY,0.34),BGINT=(255<<24)|(BG[2]<<16)|(BG[1]<<8)|BG[0];
-const PAL=[];for(let i=0;i<=16;i++)PAL.push(mix(TEAL,0.30+0.7*i/16));
+const CELL=mobile?26:20,FW=Math.ceil(W/CELL),FH=Math.ceil(H/CELL);
+const fSum=new Float32Array(FW*FH),fCnt=new Float32Array(FW*FH),fEMA=new Float32Array(FW*FH);
 let torus=false,timeScale=1,px,py,vx,vy,body,hist;
 function reset(){
   px=new Float32Array(N);py=new Float32Array(N);vx=new Float32Array(N);vy=new Float32Array(N);
   for(let i=0;i<N;i+=2){const a=Math.random()*6.2832;
     px[i]=Math.random()*W;py[i]=Math.random()*H;vx[i]=C*Math.cos(a);vy[i]=C*Math.sin(a);
     const j=i+1;if(j<N){px[j]=Math.random()*W;py[j]=Math.random()*H;vx[j]=-vx[i];vy[j]=-vy[i];}}
-  body={x:W*0.42,y:H*0.5,vx:0,vy:0};hist=[];
+  body={x:W*0.30,y:H*0.5,vx:0,vy:0};hist=[];fEMA.fill(0);
 }
 function gift(){
   const x1=body.x-BR-4,x0=x1-230;
@@ -141,13 +145,34 @@ function step(dt){
 }
 function draw(){
   buf.fill(BGINT);
+  fSum.fill(0);fCnt.fill(0);
   for(let i=0;i<N;i++){
     const xi=px[i]|0,yi=py[i]|0;
     if(xi<0||xi>=W||yi<0||yi>=H)continue;
-    const f=vx[i]/C;
-    buf[yi*W+xi]=f>0.05?PAL[Math.min(16,(f*16)|0)]:PGRAY;
+    buf[yi*W+xi]=PGRAY;
+    const ci=(yi/CELL|0)*FW+(xi/CELL|0);
+    fSum[ci]+=vx[i];fCnt[ci]++;
   }
   ctx.putImageData(img,0,0);
+  for(let ci=0;ci<FW*FH;ci++){
+    if(fCnt[ci]>6){ fEMA[ci]+=(fSum[ci]/fCnt[ci]-fEMA[ci])*0.09; }
+  }
+  for(let cy=0;cy<FH;cy++)for(let cx=0;cx<FW;cx++){
+    let sum=0,wt=0;
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+      const nx=cx+ox,ny=cy+oy;
+      if(nx<0||nx>=FW||ny<0||ny>=FH)continue;
+      const w=(ox===0&&oy===0)?8:((ox===0||oy===0)?2:1);
+      sum+=fEMA[ny*FW+nx]*w;wt+=w;
+    }
+    const f=sum/wt/C,af=Math.abs(f);
+    if(af>0.045){
+      const a=(af-0.045)*5.5;
+      ctx.fillStyle=f>0?'rgba(15,110,86,'+Math.min(0.6,a).toFixed(3)+')'
+                       :'rgba(216,90,48,'+Math.min(0.32,a*0.8).toFixed(3)+')';
+      ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);
+    }
+  }
   ctx.beginPath();ctx.arc(body.x,body.y,BR,0,6.2832);
   ctx.fillStyle='#D85A30';ctx.fill();ctx.strokeStyle='#993C1D';ctx.lineWidth=2;ctx.stroke();
   const s0=Math.hypot(body.vx,body.vy);
@@ -176,7 +201,7 @@ function loop(ts){
   draw();drawSpark();
   requestAnimationFrame(loop);
 }
-document.getElementById('kick').onclick=function(){body.vx+=0.4*C;};
+document.getElementById('kick').onclick=function(){body.vx+=0.5*C;};
 document.getElementById('gift').onclick=gift;
 document.getElementById('reset').onclick=reset;
 document.getElementById('slow').onclick=function(){
