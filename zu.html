@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Зона ускорения (ЗУ): рождение, подарок и вечный ветер</title>
+<style>
+  body{margin:0;padding:20px 16px 40px;background:#F6F7F4;color:#21221F;
+       font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+       font-size:16px;line-height:1.6}
+  .page{max-width:680px;margin:0 auto}
+  h1{font-size:21px;font-weight:600;line-height:1.3;margin:0 0 6px}
+  .sub{font-size:15px;color:#62655C;margin:0 0 18px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  button{font-size:16px;padding:12px 20px;border-radius:10px;border:1px solid #C6C9C0;
+         background:#FFFFFF;color:#21221F;cursor:pointer;min-height:44px}
+  button.primary{background:#3B6D11;border-color:#3B6D11;color:#FFFFFF;font-weight:600}
+  button.gift{background:#0F6E56;border-color:#0F6E56;color:#FFFFFF;font-weight:600}
+  button.mode{font-size:14px;padding:9px 14px;min-height:40px}
+  button.mode.on{background:#ECEFE7;border-color:#3B6D11;color:#27500A;font-weight:600}
+  button:focus-visible{outline:3px solid #97C459;outline-offset:2px}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px;
+         font-variant-numeric:tabular-nums}
+  .stat{font-size:15px;color:#62655C}
+  .stat b{font-weight:600;color:#21221F;font-size:18px}
+  .stat.wind b{color:#0F6E56}
+  canvas.main{width:100%;height:auto;display:block;border:1px solid #C6C9C0;
+         border-radius:12px;background:#FFFFFF}
+  canvas.spark{width:100%;height:44px;display:block;border:1px solid #E0E2DC;
+         border-radius:8px;background:#FFFFFF;margin-top:8px}
+  .sparklbl{font-size:13px;color:#62655C;margin-top:10px}
+  .legend{font-size:15px;color:#4A4C45;margin-top:14px;max-width:62ch}
+  .legend b.g{color:#0F6E56}
+  .note{font-size:15px;color:#4A4C45;background:#ECEFE7;border-radius:12px;
+        padding:14px 16px;margin-top:14px;line-height:1.6;max-width:62ch;box-sizing:border-box}
+  a{color:#3B6D11}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Зона ускорения (ЗУ): рождение, подарок и вечный ветер</h1>
+<p class="sub">Десятки тысяч одинаковых шариков, все со скоростью c, у каждого — только
+направление. Шарики обмениваются направлениями (внешне — пролетают насквозь), о тело
+бьются зеркально. Тело свободное. <b>Зелёная дымка</b> — шарики, летящие попутно телу:
+чем ярче, тем ровнее вслед.</p>
+<div class="bar">
+  <button class="primary" id="kick">&#9658;&nbsp;Дать импульс</button>
+  <button class="gift" id="gift">&#10022;&nbsp;Подарить готовую ЗУ</button>
+</div>
+<div class="bar">
+  <span class="stat" style="font-size:14px">Мир:</span>
+  <button class="mode on" id="mBox">коробка со стенками</button>
+  <button class="mode" id="mTor">без стенок (замкнут сам на себя)</button>
+  <button id="slow" class="mode">Замедлить</button>
+  <button id="reset" class="mode">Сброс</button>
+</div>
+<div class="stats">
+  <span class="stat">скорость тела <b id="v">0.0</b>&thinsp;% от c</span>
+  <span class="stat wind">средний ветер среды <b id="w">0.0</b>&thinsp;% от c</span>
+</div>
+<canvas id="cv" class="main" width="680" height="430"></canvas>
+<p class="sparklbl">История скорости тела (вправо — время):</p>
+<canvas id="sp" class="spark" width="680" height="44"></canvas>
+<p class="legend"><b>Что смотреть.</b> Нажмите «Дать импульс» и следите за областью
+сразу позади оранжевого тела: там сгущается <b class="g">зелёный след</b> — зона
+ускорения, рождающаяся сама. Она тем ярче и длиннее, чем быстрее тело, — и живёт,
+только пока живо движение.</p>
+<p class="note"><b>«Подарить готовую ЗУ»</b> — позади тела мгновенно создаётся плотное
+облако шариков, летящих строго в него: зона ускорения в чистом виде, мощнее любой
+естественной. В <b>коробке</b> облако даёт телу один толчок, пролетает мимо и
+рассеивается — новая зона взамен не рождается, тело плавно тормозится. Толкать —
+умеет; жить у хвоста — нет.</p>
+<p class="note"><b>Мир без стенок</b> (край экрана склеен с противоположным):
+подаренная зона по закону сохранения движения <b>не может исчезнуть</b> — рассеиваясь,
+она превращается в общий ветер среды. Следите за показателем «средний ветер»: в
+коробке он после подарка возвращается к нулю (стенки отражают шарики навстречу),
+а здесь остаётся положительным навсегда — и тело дрейфует с ветром, не останавливаясь.
+Зона ускорения и фоновый поток — одно и то же явление в два момента времени.</p>
+<p class="legend"><a href="index.html">&larr; Первая часть: толчок, полёт и зона ПНД</a></p>
+</div>
+<script>
+(function(){
+const W=680,H=430,C=150;
+const mobile=(navigator.hardwareConcurrency||4)<6||Math.min(screen.width,screen.height)<500;
+const N=mobile?16000:40000, K=2.4/N, BR=44;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const sp=document.getElementById('sp'),sx=sp.getContext('2d');
+const img=ctx.createImageData(W,H),buf=new Uint32Array(img.data.buffer);
+const BG=[255,255,255],GRAY=[136,135,128],TEAL=[15,110,86];
+function mix(cA,a){const r=Math.round(BG[0]*(1-a)+cA[0]*a),g=Math.round(BG[1]*(1-a)+cA[1]*a),
+  b=Math.round(BG[2]*(1-a)+cA[2]*a);return(255<<24)|(b<<16)|(g<<8)|r;}
+const PGRAY=mix(GRAY,0.34),BGINT=(255<<24)|(BG[2]<<16)|(BG[1]<<8)|BG[0];
+const PAL=[];for(let i=0;i<=16;i++)PAL.push(mix(TEAL,0.30+0.7*i/16));
+let torus=false,timeScale=1,px,py,vx,vy,body,hist;
+function reset(){
+  px=new Float32Array(N);py=new Float32Array(N);vx=new Float32Array(N);vy=new Float32Array(N);
+  for(let i=0;i<N;i+=2){const a=Math.random()*6.2832;
+    px[i]=Math.random()*W;py[i]=Math.random()*H;vx[i]=C*Math.cos(a);vy[i]=C*Math.sin(a);
+    const j=i+1;if(j<N){px[j]=Math.random()*W;py[j]=Math.random()*H;vx[j]=-vx[i];vy[j]=-vy[i];}}
+  body={x:W*0.42,y:H*0.5,vx:0,vy:0};hist=[];
+}
+function gift(){
+  const x1=body.x-BR-4,x0=x1-230;
+  for(let i=0;i<N;i++){let x=px[i];
+    if(torus&&x0<0&&x>x0+W)x-=W;
+    if(x>=x0&&x<x1&&Math.abs(py[i]-body.y)<75){vx[i]=C;vy[i]=0;}}
+}
+function step(dt){
+  const R=BR+1.5,R2=R*R,bx=body.x,by=body.y;
+  for(let i=0;i<N;i++){
+    let x=px[i]+vx[i]*dt,y=py[i]+vy[i]*dt;
+    if(torus){if(x<0)x+=W;else if(x>=W)x-=W;if(y<0)y+=H;else if(y>=H)y-=H;}
+    else{if(x<0){x=-x;vx[i]=Math.abs(vx[i]);}else if(x>W){x=2*W-x;vx[i]=-Math.abs(vx[i]);}
+         if(y<0){y=-y;vy[i]=Math.abs(vy[i]);}else if(y>H){y=2*H-y;vy[i]=-Math.abs(vy[i]);}}
+    let dx=x-bx,dy=y-by;
+    if(torus){if(dx>W/2)dx-=W;else if(dx<-W/2)dx+=W;if(dy>H/2)dy-=H;else if(dy<-H/2)dy+=H;}
+    if(dx>-R&&dx<R&&dy>-R&&dy<R){
+      const d2=dx*dx+dy*dy;
+      if(d2<R2&&d2>1e-6){
+        const d=Math.sqrt(d2),nx=dx/d,ny=dy/d;
+        x=bx+nx*R;y=by+ny*R;
+        if(torus){if(x<0)x+=W;else if(x>=W)x-=W;if(y<0)y+=H;else if(y>=H)y-=H;}
+        const rvx=vx[i]-body.vx,rvy=vy[i]-body.vy,rd=rvx*nx+rvy*ny;
+        if(rd<0){
+          const dvx=-2*rd*nx,dvy=-2*rd*ny;
+          let nvx=rvx+dvx+body.vx,nvy=rvy+dvy+body.vy;
+          const s=Math.hypot(nvx,nvy)||1;vx[i]=nvx*C/s;vy[i]=nvy*C/s;
+          body.vx-=K*dvx;body.vy-=K*dvy;
+        }
+      }
+    }
+    px[i]=x;py[i]=y;
+  }
+  body.x+=body.vx*dt;body.y+=body.vy*dt;
+  if(torus){if(body.x<0)body.x+=W;else if(body.x>=W)body.x-=W;
+            if(body.y<0)body.y+=H;else if(body.y>=H)body.y-=H;}
+  else{if(body.x<BR){body.x=BR;body.vx=Math.abs(body.vx);}
+       if(body.x>W-BR){body.x=W-BR;body.vx=-Math.abs(body.vx);}
+       if(body.y<BR){body.y=BR;body.vy=Math.abs(body.vy);}
+       if(body.y>H-BR){body.y=H-BR;body.vy=-Math.abs(body.vy);}}
+}
+function draw(){
+  buf.fill(BGINT);
+  for(let i=0;i<N;i++){
+    const xi=px[i]|0,yi=py[i]|0;
+    if(xi<0||xi>=W||yi<0||yi>=H)continue;
+    const f=vx[i]/C;
+    buf[yi*W+xi]=f>0.05?PAL[Math.min(16,(f*16)|0)]:PGRAY;
+  }
+  ctx.putImageData(img,0,0);
+  ctx.beginPath();ctx.arc(body.x,body.y,BR,0,6.2832);
+  ctx.fillStyle='#D85A30';ctx.fill();ctx.strokeStyle='#993C1D';ctx.lineWidth=2;ctx.stroke();
+  const s0=Math.hypot(body.vx,body.vy);
+  if(s0>2){const ux=body.vx/s0,uy=body.vy/s0,L=BR+12+60*s0/C;
+    ctx.beginPath();ctx.moveTo(body.x+ux*BR,body.y+uy*BR);
+    ctx.lineTo(body.x+ux*L,body.y+uy*L);ctx.strokeStyle='#993C1D';ctx.lineWidth=3;ctx.stroke();}
+}
+function drawSpark(){
+  sx.clearRect(0,0,680,44);
+  sx.strokeStyle='#C6C9C0';sx.beginPath();sx.moveTo(0,38);sx.lineTo(680,38);sx.stroke();
+  sx.strokeStyle='#0F6E56';sx.lineWidth=1.8;sx.beginPath();
+  const n=hist.length,m=Math.min(n,1360);
+  for(let i=0;i<m;i++){const v=hist[n-m+i];
+    const y=38-Math.max(-4,Math.min(34,v/0.45*34));
+    i?sx.lineTo(i*680/1360,y):sx.moveTo(0,y);}
+  sx.stroke();
+}
+let last=0;
+function loop(ts){
+  if(!last)last=ts;const dt=Math.min(0.033,(ts-last)/1000)*timeScale;last=ts;
+  step(dt/2);step(dt/2);
+  let sw=0;for(let i=0;i<N;i++)sw+=vx[i];
+  hist.push(body.vx/C);
+  document.getElementById('v').textContent=(body.vx/C*100).toFixed(1);
+  document.getElementById('w').textContent=(sw/N/C*100).toFixed(1);
+  draw();drawSpark();
+  requestAnimationFrame(loop);
+}
+document.getElementById('kick').onclick=function(){body.vx+=0.4*C;};
+document.getElementById('gift').onclick=gift;
+document.getElementById('reset').onclick=reset;
+document.getElementById('slow').onclick=function(){
+  timeScale=timeScale===1?0.35:1;
+  this.textContent=timeScale===1?'Замедлить':'Обычная скорость';};
+const mB=document.getElementById('mBox'),mT=document.getElementById('mTor');
+mB.onclick=function(){torus=false;mB.classList.add('on');mT.classList.remove('on');reset();};
+mT.onclick=function(){torus=true;mT.classList.add('on');mB.classList.remove('on');reset();};
+reset();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
