@@ -47,7 +47,9 @@
 (газ позади тела, летящий вслед и догоняющий его — он давит телу в спину);
 <b style="color:#607D94">серо-голубая — носовая волна</b> (газ, который тело
 растолкало вперёд и который от него убегает); <b style="color:#993C1D">рыжая</b> —
-течение против хода тела. Нет порядка — нет дымки.</p>
+течение против хода тела. Дымка показывает только МЕСТНЫЕ отличия от общего
+среднего ветра (сам ветер — числом над экраном), поэтому светится лишь возле
+тела: равномерное течение всего мира — не структура, и дымки не даёт.</p>
 <div class="bar">
   <button class="primary" id="kick">&#9658;&nbsp;Толчок телу (мгновенный импульс)</button>
   <button class="gift" id="gift">&#10022;&nbsp;Подарить готовую ЗУ</button>
@@ -82,7 +84,10 @@
 она превращается в общий ветер среды. Следите за показателем «средний ветер»: в
 коробке он после подарка возвращается к нулю (стенки отражают шарики навстречу),
 а здесь остаётся положительным навсегда — и тело дрейфует с ветром, не останавливаясь.
-Зона ускорения и фоновый поток — одно и то же явление в два момента времени.</p>
+Дымка при этом гаснет: подаренная зона превратилась в РАВНОМЕРНЫЙ ветер всего мира,
+а равномерное течение — уже не местная структура (его показывает число «средний
+ветер»). Зона ускорения и фоновый поток — одно и то же явление в два момента
+времени: молодая зона — местный сгусток, старая — ветер.</p>
 <p class="legend"><a href="index.html">&larr; Первая часть: толчок, полёт и зона ПНД</a></p>
 </div>
 <script>
@@ -147,7 +152,7 @@ function step(dt){
        if(body.y<BR){body.y=BR;body.vy=Math.abs(body.vy);}
        if(body.y>H-BR){body.y=H-BR;body.vy=-Math.abs(body.vy);}}
 }
-function draw(){
+function draw(wind){
   buf.fill(BGINT);
   fSum.fill(0);fCnt.fill(0);
   for(let i=0;i<N;i++){
@@ -170,7 +175,7 @@ function draw(){
       const w=(ox===0&&oy===0)?8:((ox===0||oy===0)?2:1);
       sum+=fEMA[ny*FW+nx]*w;wt+=w;
     }
-    const f=sum/wt/C,fdir=f*sdir;
+    const f=sum/wt/C,fdir=(f-wind)*sdir;
     let rel=(cx+0.5)*CELL-body.x;
     if(torus){ if(rel>W/2)rel-=W; else if(rel<-W/2)rel+=W; }
     const behind=rel*sdir<0;
@@ -179,7 +184,7 @@ function draw(){
       ctx.fillStyle=behind?'rgba(15,110,86,'+Math.min(0.6,a).toFixed(3)+')'
                           :'rgba(96,125,148,'+Math.min(0.42,a*0.75).toFixed(3)+')';
       ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);
-    } else if(fdir<-0.045){
+    } else if(fdir<-0.045 && f*sdir<-0.045){
       const a=Math.min(0.32,(-fdir-0.045)*4.4);
       ctx.fillStyle='rgba(216,90,48,'+a.toFixed(3)+')';
       ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);
@@ -210,7 +215,7 @@ function loop(ts){
   hist.push(body.vx/C);
   document.getElementById('v').textContent=(body.vx/C*100).toFixed(1);
   document.getElementById('w').textContent=(sw/N/C*100).toFixed(1);
-  draw();drawSpark();
+  draw(sw/N/C);drawSpark();
   requestAnimationFrame(loop);
 }
 document.getElementById('kick').onclick=function(){body.vx+=0.5*C;};
