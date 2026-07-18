@@ -53,18 +53,27 @@
 <div class="bar">
   <button class="primary" id="kick">&#9658;&nbsp;Толчок телу (мгновенный импульс)</button>
   <button class="gift" id="gift">&#10022;&nbsp;Подарить готовую ЗУ</button>
+  <button id="scen">&#9654;&#9654;&nbsp;Показать всё</button>
 </div>
 <div class="bar">
   <span class="stat" style="font-size:14px">Мир:</span>
   <button class="mode on" id="mBox">коробка со стенками</button>
   <button class="mode" id="mTor">без стенок (замкнут сам на себя)</button>
   <button id="slow" class="mode">Замедлить</button>
+  <button id="pause" class="mode">Пауза</button>
   <button id="reset" class="mode">Сброс</button>
 </div>
 <div class="stats">
   <span class="stat">скорость тела <b id="v">0.0</b>&thinsp;% от c</span>
   <span class="stat wind">средний ветер среды <b id="w">0.0</b>&thinsp;% от c</span>
+  <span class="stat">давит: <b id="fB" style="color:#0F6E56">+0.0</b> в спину&thinsp;·&thinsp;<b id="fF" style="color:#993C1D">−0.0</b> в нос</span>
 </div>
+<div style="height:7px;background:#E4E6E0;border-radius:4px;margin:-4px 0 8px;position:relative;overflow:hidden">
+  <div id="barB" style="position:absolute;left:50%;top:0;height:100%;background:#1D9E75;width:0"></div>
+  <div id="barF" style="position:absolute;right:50%;top:0;height:100%;background:#D85A30;width:0"></div>
+  <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:#62655C"></div>
+</div>
+<div id="hint" style="min-height:24px;margin:0 0 8px;font-size:15px;font-weight:600;color:#27500A"></div>
 <canvas id="cv" class="main" width="680" height="430"></canvas>
 <p class="sparklbl">История скорости тела (вправо — время):</p>
 <canvas id="sp" class="spark" width="680" height="44"></canvas>
@@ -73,7 +82,9 @@
 догоняющий газ, который давит телу в спину. Впереди появляется серо-голубая носовая
 волна — шарики, которых тело растолкало: они убегают вперёд и уносят его ход. Зона
 поддерживает, волна расходует — и волны всегда рождается больше, поэтому тело плавно
-замедляется, а обе дымки гаснут вместе с движением.</p>
+замедляется, а обе дымки гаснут вместе с движением. Стрелки в дымке показывают,
+куда течёт газ; весы под цифрами — давление догоняющих в спину (зелёное) против
+встречных в нос (рыжее). Кнопка «Показать всё» проводит весь показ сама.</p>
 <p class="note"><b>«Подарить готовую ЗУ»</b> — позади тела мгновенно создаётся плотное
 облако шариков, летящих строго в него: зона ускорения в чистом виде, мощнее любой
 естественной. В <b>коробке</b> облако даёт телу один толчок, пролетает мимо и
@@ -105,12 +116,14 @@ const PGRAY=mix(GRAY,0.34),BGINT=(255<<24)|(BG[2]<<16)|(BG[1]<<8)|BG[0];
 const CELL=mobile?26:20,FW=Math.ceil(W/CELL),FH=Math.ceil(H/CELL);
 const fSum=new Float32Array(FW*FH),fCnt=new Float32Array(FW*FH),fEMA=new Float32Array(FW*FH);
 let torus=false,timeScale=1,px,py,vx,vy,body,hist;
+let paused=false,fbB=0,fbF=0,accB=0,accF=0,labelT=0,labelG=0,trail=[],trailAcc=0,scenTimers=[];
 function reset(){
   px=new Float32Array(N);py=new Float32Array(N);vx=new Float32Array(N);vy=new Float32Array(N);
   for(let i=0;i<N;i+=2){const a=Math.random()*6.2832;
     px[i]=Math.random()*W;py[i]=Math.random()*H;vx[i]=C*Math.cos(a);vy[i]=C*Math.sin(a);
     const j=i+1;if(j<N){px[j]=Math.random()*W;py[j]=Math.random()*H;vx[j]=-vx[i];vy[j]=-vy[i];}}
   body={x:W*0.30,y:H*0.5,vx:0,vy:0};hist=[];fEMA.fill(0);
+  trail=[];trailAcc=0;labelT=0;labelG=0;fbB=0;fbF=0;accB=0;accF=0;
 }
 function gift(){
   const x1=body.x-BR-4,x0=x1-230;
@@ -119,7 +132,7 @@ function gift(){
     if(x>=x0&&x<x1&&Math.abs(py[i]-body.y)<75){vx[i]=C;vy[i]=0;}}
 }
 function step(dt){
-  const R=BR+1.5,R2=R*R,bx=body.x,by=body.y;
+  const R=BR+1.5,R2=R*R,bx=body.x,by=body.y,sd=body.vx>=0?1:-1;
   for(let i=0;i<N;i++){
     let x=px[i]+vx[i]*dt,y=py[i]+vy[i]*dt;
     if(torus){if(x<0)x+=W;else if(x>=W)x-=W;if(y<0)y+=H;else if(y>=H)y-=H;}
@@ -139,11 +152,14 @@ function step(dt){
           let nvx=rvx+dvx+body.vx,nvy=rvy+dvy+body.vy;
           const s=Math.hypot(nvx,nvy)||1;vx[i]=nvx*C/s;vy[i]=nvy*C/s;
           body.vx-=K*dvx;body.vy-=K*dvy;
+          if(dx*sd>0)accF-=K*dvx; else accB-=K*dvx;
         }
       }
     }
     px[i]=x;py[i]=y;
   }
+  trailAcc+=dt;
+  if(trailAcc>0.12){trailAcc=0;trail.push({x:body.x,y:body.y});if(trail.length>40)trail.shift();}
   body.x+=body.vx*dt;body.y+=body.vy*dt;
   if(torus){if(body.x<0)body.x+=W;else if(body.x>=W)body.x-=W;
             if(body.y<0)body.y+=H;else if(body.y>=H)body.y-=H;}
@@ -153,6 +169,10 @@ function step(dt){
        if(body.y>H-BR){body.y=H-BR;body.vy=-Math.abs(body.vy);}}
 }
 function draw(wind){
+  const arrow=(x0,y0,dirn,col)=>{ctx.strokeStyle=col;ctx.lineWidth=1.4;ctx.beginPath();
+    ctx.moveTo(x0-dirn*6,y0);ctx.lineTo(x0+dirn*6,y0);
+    ctx.lineTo(x0+dirn*2,y0-3);ctx.moveTo(x0+dirn*6,y0);
+    ctx.lineTo(x0+dirn*2,y0+3);ctx.stroke();};
   buf.fill(BGINT);
   fSum.fill(0);fCnt.fill(0);
   for(let i=0;i<N;i++){
@@ -184,18 +204,43 @@ function draw(wind){
       ctx.fillStyle=behind?'rgba(15,110,86,'+Math.min(0.6,a).toFixed(3)+')'
                           :'rgba(96,125,148,'+Math.min(0.42,a*0.75).toFixed(3)+')';
       ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);
+      if(a>0.16&&((cx+cy)%2)===0)
+        arrow(cx*CELL+CELL/2,cy*CELL+CELL/2,f>0?1:-1,
+              behind?'rgba(8,80,65,0.55)':'rgba(50,75,95,0.5)');
     } else if(fdir<-0.045 && f*sdir<-0.045){
       const a=Math.min(0.32,(-fdir-0.045)*4.4);
       ctx.fillStyle='rgba(216,90,48,'+a.toFixed(3)+')';
       ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);
+      if(a>0.16&&((cx+cy)%2)===0)
+        arrow(cx*CELL+CELL/2,cy*CELL+CELL/2,f>0?1:-1,'rgba(150,60,30,0.55)');
     }
   }
+  for(let i=0;i<trail.length;i++){
+    const ta=(i+1)/trail.length*0.35;
+    ctx.beginPath();ctx.arc(trail[i].x,trail[i].y,3,0,6.2832);
+    ctx.fillStyle='rgba(216,90,48,'+ta.toFixed(2)+')';ctx.fill();}
   ctx.beginPath();ctx.arc(body.x,body.y,BR,0,6.2832);
   ctx.fillStyle='#D85A30';ctx.fill();ctx.strokeStyle='#993C1D';ctx.lineWidth=2;ctx.stroke();
   const s0=Math.hypot(body.vx,body.vy);
   if(s0>2){const ux=body.vx/s0,uy=body.vy/s0,L=BR+12+60*s0/C;
     ctx.beginPath();ctx.moveTo(body.x+ux*BR,body.y+uy*BR);
     ctx.lineTo(body.x+ux*L,body.y+uy*L);ctx.strokeStyle='#993C1D';ctx.lineWidth=3;ctx.stroke();}
+  const sd2=body.vx>=0?1:-1;
+  const putLabel=(txt,x,y,col,al)=>{
+    x=Math.max(76,Math.min(W-76,x));
+    ctx.font='600 13px -apple-system,sans-serif';ctx.textAlign='center';
+    ctx.lineWidth=4;ctx.strokeStyle='rgba(255,255,255,'+(0.9*al).toFixed(2)+')';
+    ctx.strokeText(txt,x,y);
+    ctx.fillStyle=col.replace('AL',al.toFixed(2));ctx.fillText(txt,x,y);};
+  if(labelT>0&&s0>0.05*C){
+    const al=Math.min(1,labelT/1.5);
+    putLabel('зона ускорения',body.x-sd2*(BR+72),body.y+BR+24,'rgba(8,80,65,AL)',al);
+    putLabel('носовая волна',body.x+sd2*(BR+78),body.y-BR-14,'rgba(50,75,95,AL)',al);
+  }
+  if(labelG>0){
+    const al=Math.min(1,labelG/1.5);
+    putLabel('готовая ЗУ',body.x-sd2*(BR+100),body.y-BR-14,'rgba(8,80,65,AL)',al);
+  }
 }
 function drawSpark(){
   sx.clearRect(0,0,680,44);
@@ -209,24 +254,58 @@ function drawSpark(){
 }
 let last=0;
 function loop(ts){
-  if(!last)last=ts;const dt=Math.min(0.033,(ts-last)/1000)*timeScale;last=ts;
-  step(dt/2);step(dt/2);
+  if(!last)last=ts;const dtRaw=Math.min(0.033,(ts-last)/1000);last=ts;
+  const dt=paused?0:dtRaw*timeScale;
+  labelT=Math.max(0,labelT-dtRaw);labelG=Math.max(0,labelG-dtRaw);
+  if(dt>0){
+    step(dt/2);step(dt/2);
+    fbB+=(accB/dt-fbB)*0.06;fbF+=(accF/dt-fbF)*0.06;accB=0;accF=0;
+    hist.push(body.vx/C);
+  }
   let sw=0;for(let i=0;i<N;i++)sw+=vx[i];
-  hist.push(body.vx/C);
   document.getElementById('v').textContent=(body.vx/C*100).toFixed(1);
   document.getElementById('w').textContent=(sw/N/C*100).toFixed(1);
+  const pB=fbB/C*100,pF=fbF/C*100;
+  document.getElementById('fB').textContent=(pB>=0?'+':'')+pB.toFixed(1);
+  document.getElementById('fF').textContent=(pF>=0?'+':'')+pF.toFixed(1);
+  document.getElementById('barB').style.width=Math.min(48,Math.abs(pB)*2.4)+'%';
+  document.getElementById('barF').style.width=Math.min(48,Math.abs(pF)*2.4)+'%';
   draw(sw/N/C);drawSpark();
   requestAnimationFrame(loop);
 }
-document.getElementById('kick').onclick=function(){body.vx+=0.5*C;};
-document.getElementById('gift').onclick=gift;
+document.getElementById('kick').onclick=function(){body.vx+=0.5*C;labelT=6;};
+document.getElementById('gift').onclick=function(){gift();labelG=5;};
 document.getElementById('reset').onclick=reset;
 document.getElementById('slow').onclick=function(){
-  timeScale=timeScale===1?0.35:1;
-  this.textContent=timeScale===1?'Замедлить':'Обычная скорость';};
+  timeScale=timeScale===1?0.35:(timeScale===0.35?0.1:1);
+  this.textContent=timeScale===1?'Замедлить':(timeScale===0.35?'Ещё медленнее':'Обычная скорость');};
+document.getElementById('pause').onclick=function(){
+  paused=!paused;this.textContent=paused?'Продолжить':'Пауза';};
 const mB=document.getElementById('mBox'),mT=document.getElementById('mTor');
 mB.onclick=function(){torus=false;mB.classList.add('on');mT.classList.remove('on');reset();};
 mT.onclick=function(){torus=true;mT.classList.add('on');mB.classList.remove('on');reset();};
+const hintEl=document.getElementById('hint'),scenBtn=document.getElementById('scen');
+function scenStop(){scenTimers.forEach(clearTimeout);scenTimers=[];hintEl.textContent='';
+  scenBtn.innerHTML='&#9654;&#9654;&nbsp;Показать всё';}
+scenBtn.onclick=function(){
+  if(scenTimers.length){scenStop();return;}
+  scenBtn.textContent='Остановить показ';
+  const at=(ms,fn)=>scenTimers.push(setTimeout(fn,ms));
+  mB.onclick();
+  hintEl.textContent='Смотрите: сейчас толкнём тело…';
+  at(1500,()=>{document.getElementById('kick').onclick();
+    hintEl.textContent='Позади тела — зелёная зона ускорения, впереди — серая носовая волна';});
+  at(8000,()=>{hintEl.textContent='Весы под цифрами: спина толкает, но нос перевешивает — тело замедляется';});
+  at(13000,()=>{document.getElementById('gift').onclick();
+    hintEl.textContent='Дарим готовую зону — разовый толчок в спину…';});
+  at(19000,()=>{hintEl.textContent='Зона рассеялась, тело снова тормозит: в коробке вечного движения нет';});
+  at(24500,()=>{mT.onclick();
+    hintEl.textContent='Теперь мир без стенок — дарим зону ещё раз…';});
+  at(26500,()=>{document.getElementById('gift').onclick();});
+  at(32000,()=>{hintEl.textContent='Зоне некуда исчезнуть: она стала общим ветром — смотрите число сверху';});
+  at(38000,()=>{hintEl.textContent='И тело плывёт вечно. Это закон сохранения движения. Конец показа';});
+  at(45000,()=>scenStop());
+};
 reset();requestAnimationFrame(loop);
 })();
 </script>
