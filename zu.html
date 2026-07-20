@@ -53,7 +53,6 @@
 <div class="bar">
   <button class="primary" id="kick">&#9658;&nbsp;Толчок телу (мгновенный импульс)</button>
   <button class="gift" id="gift">&#10022;&nbsp;Подарить готовую ЗУ</button>
-  <button id="scen">&#9654;&#9654;&nbsp;Показать всё</button>
 </div>
 <div class="bar">
   <span class="stat" style="font-size:14px">Мир:</span>
@@ -73,7 +72,6 @@
   <div id="barF" style="position:absolute;right:50%;top:0;height:100%;background:#D85A30;width:0"></div>
   <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:#62655C"></div>
 </div>
-<div id="hint" style="min-height:24px;margin:0 0 8px;font-size:15px;font-weight:600;color:#27500A"></div>
 <canvas id="cv" class="main" width="680" height="430"></canvas>
 <p class="sparklbl">История скорости тела (вправо — время):</p>
 <canvas id="sp" class="spark" width="680" height="44"></canvas>
@@ -84,7 +82,7 @@
 поддерживает, волна расходует — и волны всегда рождается больше, поэтому тело плавно
 замедляется, а обе дымки гаснут вместе с движением. Стрелки в дымке показывают,
 куда течёт газ; весы под цифрами — давление догоняющих в спину (зелёное) против
-встречных в нос (рыжее). Кнопка «Показать всё» проводит весь показ сама.</p>
+встречных в нос (рыжее).</p>
 <p class="note"><b>«Подарить готовую ЗУ»</b> — позади тела мгновенно создаётся плотное
 облако шариков, летящих строго в него: зона ускорения в чистом виде, мощнее любой
 естественной. В <b>коробке</b> облако даёт телу один толчок, пролетает мимо и
@@ -116,7 +114,7 @@ const PGRAY=mix(GRAY,0.34),BGINT=(255<<24)|(BG[2]<<16)|(BG[1]<<8)|BG[0];
 const CELL=mobile?26:20,FW=Math.ceil(W/CELL),FH=Math.ceil(H/CELL);
 const fSum=new Float32Array(FW*FH),fCnt=new Float32Array(FW*FH),fEMA=new Float32Array(FW*FH);
 let torus=false,timeScale=1,px,py,vx,vy,body,hist;
-let paused=false,fbB=0,fbF=0,accB=0,accF=0,labelT=0,labelG=0,trail=[],trailAcc=0,scenTimers=[];
+let paused=false,fbB=0,fbF=0,accB=0,accF=0,labelT=0,labelG=0,trail=[],trailAcc=0;
 function reset(){
   px=new Float32Array(N);py=new Float32Array(N);vx=new Float32Array(N);vy=new Float32Array(N);
   for(let i=0;i<N;i+=2){const a=Math.random()*6.2832;
@@ -284,28 +282,6 @@ document.getElementById('pause').onclick=function(){
 const mB=document.getElementById('mBox'),mT=document.getElementById('mTor');
 mB.onclick=function(){torus=false;mB.classList.add('on');mT.classList.remove('on');reset();};
 mT.onclick=function(){torus=true;mT.classList.add('on');mB.classList.remove('on');reset();};
-const hintEl=document.getElementById('hint'),scenBtn=document.getElementById('scen');
-function scenStop(){scenTimers.forEach(clearTimeout);scenTimers=[];hintEl.textContent='';
-  scenBtn.innerHTML='&#9654;&#9654;&nbsp;Показать всё';}
-scenBtn.onclick=function(){
-  if(scenTimers.length){scenStop();return;}
-  scenBtn.textContent='Остановить показ';
-  const at=(ms,fn)=>scenTimers.push(setTimeout(fn,ms));
-  mB.onclick();
-  hintEl.textContent='Смотрите: сейчас толкнём тело…';
-  at(1500,()=>{document.getElementById('kick').onclick();
-    hintEl.textContent='Позади тела — зелёная зона ускорения, впереди — серая носовая волна';});
-  at(8000,()=>{hintEl.textContent='Весы под цифрами: спина толкает, но нос перевешивает — тело замедляется';});
-  at(13000,()=>{document.getElementById('gift').onclick();
-    hintEl.textContent='Дарим готовую зону — разовый толчок в спину…';});
-  at(19000,()=>{hintEl.textContent='Зона рассеялась, тело снова тормозит: в коробке вечного движения нет';});
-  at(24500,()=>{mT.onclick();
-    hintEl.textContent='Теперь мир без стенок — дарим зону ещё раз…';});
-  at(26500,()=>{document.getElementById('gift').onclick();});
-  at(32000,()=>{hintEl.textContent='Зоне некуда исчезнуть: она стала общим ветром — смотрите число сверху';});
-  at(38000,()=>{hintEl.textContent='И тело плывёт вечно. Это закон сохранения движения. Конец показа';});
-  at(45000,()=>scenStop());
-};
 reset();requestAnimationFrame(loop);
 })();
 </script>
