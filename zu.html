@@ -66,6 +66,7 @@
   <span class="stat">скорость тела <b id="v">0.0</b>&thinsp;% от c</span>
   <span class="stat wind">средний ветер среды <b id="w">0.0</b>&thinsp;% от c</span>
   <span class="stat">давит: <b id="fB" style="color:#0F6E56">+0.0</b> в спину&thinsp;·&thinsp;<b id="fF" style="color:#993C1D">−0.0</b> в нос</span>
+  <span class="stat">соударений в секунду: <b id="hF" style="color:#993C1D">0</b> в нос&thinsp;·&thinsp;<b id="hB" style="color:#0F6E56">0</b> в спину</span>
 </div>
 <div style="height:7px;background:#E4E6E0;border-radius:4px;margin:-4px 0 8px;position:relative;overflow:hidden">
   <div id="barB" style="position:absolute;left:50%;top:0;height:100%;background:#1D9E75;width:0"></div>
@@ -82,7 +83,9 @@
 поддерживает, волна расходует — и волны всегда рождается больше, поэтому тело плавно
 замедляется, а обе дымки гаснут вместе с движением. Стрелки в дымке показывают,
 куда течёт газ; весы под цифрами — давление догоняющих в спину (зелёное) против
-встречных в нос (рыжее).</p>
+встречных в нос (рыжее). Рядом — счётчик числа соударений в секунду по каждой
+стороне: у стоящего тела счёт ровный, у движущегося в нос всегда набегает
+больше — сравнивайте на любой скорости.</p>
 <p class="note"><b>«Подарить готовую ЗУ»</b> — позади тела мгновенно создаётся плотное
 облако шариков, летящих строго в него: зона ускорения в чистом виде, мощнее любой
 естественной. В <b>коробке</b> облако даёт телу один толчок, пролетает мимо и
@@ -115,6 +118,7 @@ const CELL=mobile?26:20,FW=Math.ceil(W/CELL),FH=Math.ceil(H/CELL);
 const fSum=new Float32Array(FW*FH),fCnt=new Float32Array(FW*FH),fEMA=new Float32Array(FW*FH);
 let torus=false,timeScale=1,px,py,vx,vy,body,hist;
 let paused=false,fbB=0,fbF=0,accB=0,accF=0,labelT=0,labelG=0,trail=[],trailAcc=0;
+let hitB=0,hitF=0,hAccB=0,hAccF=0;
 function reset(){
   px=new Float32Array(N);py=new Float32Array(N);vx=new Float32Array(N);vy=new Float32Array(N);
   for(let i=0;i<N;i+=2){const a=Math.random()*6.2832;
@@ -122,6 +126,7 @@ function reset(){
     const j=i+1;if(j<N){px[j]=Math.random()*W;py[j]=Math.random()*H;vx[j]=-vx[i];vy[j]=-vy[i];}}
   body={x:W*0.30,y:H*0.5,vx:0,vy:0};hist=[];fEMA.fill(0);
   trail=[];trailAcc=0;labelT=0;labelG=0;fbB=0;fbF=0;accB=0;accF=0;
+  hitB=0;hitF=0;hAccB=0;hAccF=0;
 }
 function gift(){
   const x1=body.x-BR-4,x0=x1-230;
@@ -150,7 +155,7 @@ function step(dt){
           let nvx=rvx+dvx+body.vx,nvy=rvy+dvy+body.vy;
           const s=Math.hypot(nvx,nvy)||1;vx[i]=nvx*C/s;vy[i]=nvy*C/s;
           body.vx-=K*dvx;body.vy-=K*dvy;
-          if(dx*sd>0)accF-=K*dvx; else accB-=K*dvx;
+          if(dx*sd>0){accF-=K*dvx;hAccF++;} else {accB-=K*dvx;hAccB++;}
         }
       }
     }
@@ -258,6 +263,7 @@ function loop(ts){
   if(dt>0){
     step(dt/2);step(dt/2);
     fbB+=(accB/dt-fbB)*0.06;fbF+=(accF/dt-fbF)*0.06;accB=0;accF=0;
+    hitB+=(hAccB/dt-hitB)*0.06;hitF+=(hAccF/dt-hitF)*0.06;hAccB=0;hAccF=0;
     hist.push(body.vx/C);
   }
   let sw=0;for(let i=0;i<N;i++)sw+=vx[i];
@@ -268,6 +274,8 @@ function loop(ts){
   document.getElementById('fF').textContent=(pF>=0?'+':'')+pF.toFixed(1);
   document.getElementById('barB').style.width=Math.min(48,Math.abs(pB)*2.4)+'%';
   document.getElementById('barF').style.width=Math.min(48,Math.abs(pF)*2.4)+'%';
+  document.getElementById('hF').textContent=Math.round(hitF);
+  document.getElementById('hB').textContent=Math.round(hitB);
   draw(sw/N/C);drawSpark();
   requestAnimationFrame(loop);
 }
